@@ -5,11 +5,30 @@ import { filterTargetConsultants, isWithinCycleDates } from '../lib/rules';
 import { useToast } from '../context/ToastContext';
 import {
   Zap, Users, AlertCircle, Calendar, Send, Clock,
-  Play, CheckCircle, XCircle, Loader
+  Play, CheckCircle, XCircle, Loader, BarChart2, PieChart as PieChartIcon
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { format, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { supabase } from '../lib/supabase';
 
-const EDGE_FUNCTION_URL =
-  'https://mqbmwzjscyobpvdfkjvh.supabase.co/functions/v1/send-consultant-reminders';
+const EDGE_FUNCTION_URL = 'https://mqbmwzjscyobpvdfkjvh.supabase.co/functions/v1/send-consultant-reminders';
+
+const STATUS_COLORS = ['#10b981', '#facc15', '#ef4444'];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 12, borderRadius: 8, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+        <p style={{ fontWeight: 500, margin: '0 0 4px 0' }}>{label}</p>
+        <p style={{ fontSize: 13, color: 'var(--color-primary-light)', fontWeight: 700, margin: 0 }}>
+          {payload[0].value} mensajes
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface AutoResult {
   executed?: boolean;
@@ -36,10 +55,76 @@ export function DashboardPage({ onNavigate }: Props) {
   const [autoResult, setAutoResult] = useState<AutoResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Datos para gráficos
+  const [weeklyData, setWeeklyData] = useState<{name: string, mensajes: number}[]>([]);
+  const [statusData, setStatusData] = useState<{name: string, value: number}[]>([
+    { name: 'Entregados', value: 0 },
+    { name: 'Pendientes', value: 0 },
+    { name: 'Fallidos', value: 0 }
+  ]);
+  const [totalToday, setTotalToday] = useState(0);
+
   useEffect(() => {
     Promise.all([getActiveCycles(), getConsultants()])
       .then(([c, cs]) => { setCycles(c); setConsultants(cs); })
       .finally(() => setLoading(false));
+
+    const fetchLogs = async () => {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const startDate = subDays(new Date(), 6);
+      startDate.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from('send_logs')
+        .select('status, sent_at, is_test')
+        .gte('sent_at', startDate.toISOString());
+
+      if (!error && data) {
+        let entregados = 0;
+        let fallidos = 0;
+        let pendientes = 0;
+        let totalHoy = 0;
+
+        const daysMap: Record<string, number> = {};
+        for(let i=6; i>=0; i--) {
+           const d = format(subDays(new Date(), i), 'E', { locale: es });
+           daysMap[d.charAt(0).toUpperCase() + d.slice(1)] = 0;
+        }
+
+        data.forEach(log => {
+           if (log.is_test) return;
+
+           if (log.status === 'success') entregados++;
+           else if (log.status === 'error') fallidos++;
+           else pendientes++;
+
+           if (log.sent_at) {
+              const logDate = new Date(log.sent_at);
+              if (logDate >= todayStart) {
+                totalHoy++;
+              }
+              const dayStr = format(logDate, 'E', { locale: es });
+              const capitalized = dayStr.charAt(0).toUpperCase() + dayStr.slice(1);
+              if (daysMap[capitalized] !== undefined) {
+                 daysMap[capitalized]++;
+              }
+           }
+        });
+
+        const newWeekly = Object.keys(daysMap).map(k => ({ name: k, mensajes: daysMap[k] }));
+
+        setWeeklyData(newWeekly);
+        setStatusData([
+          { name: 'Entregados', value: entregados },
+          { name: 'Pendientes', value: pendientes },
+          { name: 'Fallidos', value: fallidos },
+        ]);
+        setTotalToday(totalHoy);
+      }
+    };
+    fetchLogs();
   }, []);
 
   const targets = filterTargetConsultants(consultants);
@@ -47,6 +132,7 @@ export function DashboardPage({ onNavigate }: Props) {
   const retrasadas = consultants.filter((c) => c.estatus === 'Retrasada').length;
   const activeCycle = cycles[0];
   const cycleOk = activeCycle ? isWithinCycleDates(activeCycle) : false;
+  const totalPie = statusData.reduce((acc, curr) => acc + curr.value, 0);
 
   const today = new Date().toLocaleDateString('es-MX', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -226,6 +312,103 @@ export function DashboardPage({ onNavigate }: Props) {
                 ? <><Loader size={14} className="btn-spin" />Ejecutando...</>
                 : <><Play size={14} />Ejecutar Ahora</>}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN DE GRÁFICOS */}
+      <div className="grid-2" style={{ gap: 16, marginBottom: 20 }}>
+        {/* Gráfico de Evolución */}
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <BarChart2 size={14} style={{ color: 'var(--color-primary-light)' }} />
+              Evolución de Envíos (Últimos 7 días)
+            </div>
+          </div>
+          <div className="card-body">
+            <div style={{ height: 250, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorMensajes" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-primary, #8b5cf6)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="var(--color-primary, #8b5cf6)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: 'var(--color-text-muted)', fontSize: 12 }}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="mensajes" 
+                    stroke="var(--color-primary)" 
+                    strokeWidth={3}
+                    fillOpacity={1} 
+                    fill="url(#colorMensajes)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Gráfico de Dona */}
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">
+              <PieChartIcon size={14} style={{ color: 'var(--color-primary-light)' }} />
+              Estado de Mensajes
+            </div>
+          </div>
+          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ height: 200, width: '100%', position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {statusData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: 12, border: '1px solid var(--color-border)', background: 'var(--color-surface)', color: 'var(--color-text)' }}
+                    itemStyle={{ color: 'var(--color-text)', fontWeight: 'bold' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                <span style={{ fontSize: 24, fontWeight: 'bold' }}>{loading ? '...' : totalPie}</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Total envíos</span>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+              {statusData.map((entry, index) => (
+                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: STATUS_COLORS[index % STATUS_COLORS.length] }} />
+                  <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500 }}>{entry.name} ({entry.value})</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
