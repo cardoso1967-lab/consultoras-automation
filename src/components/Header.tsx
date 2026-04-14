@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search, Bell, Globe, Command } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Search, Bell, Globe, Command, Moon, Sun } from 'lucide-react';
 import { Input } from './ui/Input';
 import { Badge } from './ui/Badge';
 
@@ -9,6 +9,18 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    // Inicializar el estado basado en la clase del documento si existe, 
+    // pero forzamos dark por defecto e indicación del usuario
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDark]);
+
   return (
     <header className="h-20 border-b border-border/50 bg-background/60 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-10">
       <div className="flex flex-col">
@@ -48,10 +60,12 @@ export function Header({ title, subtitle }: HeaderProps) {
           </Badge>
           
           <button 
-            className="hidden sm:flex p-2 rounded-lg hover:bg-surface text-foreground/50 transition-colors"
-            aria-label="Sitio web"
+            onClick={() => setIsDark(!isDark)}
+            className="hidden sm:flex p-2 rounded-lg hover:bg-surface text-foreground/50 hover:text-foreground transition-colors"
+            aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            title={isDark ? "Modo Claro" : "Modo Oscuro"}
           >
-            <Globe size={20} aria-hidden="true" />
+            {isDark ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>

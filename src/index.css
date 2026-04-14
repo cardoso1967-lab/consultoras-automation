@@ -1,40 +1,102 @@
 @import "tailwindcss";
 
+:root {
+  /* --- Light Mode Tokens --- */
+  --primary: oklch(50% 0.2 285);
+  --primary-foreground: oklch(98% 0.01 285);
+  
+  --secondary: oklch(90% 0.05 265);
+  --secondary-foreground: oklch(25% 0.05 265);
+
+  --background: oklch(98% 0.01 265);
+  --foreground: oklch(15% 0.05 265);
+  
+  --surface: oklch(100% 0 0);
+  --surface-dim: oklch(95% 0.02 265);
+  --surface-bright: oklch(100% 0 0);
+  
+  --border: oklch(85% 0.02 265 / 40%);
+  --border-bright: oklch(75% 0.04 265 / 60%);
+  
+  --ring: oklch(50% 0.2 285 / 50%);
+
+  --success: oklch(60% 0.18 155);
+  --success-foreground: oklch(98% 0.05 155);
+  
+  --warning: oklch(70% 0.15 75);
+  --warning-foreground: oklch(25% 0.05 75);
+  
+  --destructive: oklch(55% 0.2 25);
+  --destructive-foreground: oklch(98% 0.02 25);
+  
+  --info: oklch(55% 0.15 240);
+  --info-foreground: oklch(98% 0.02 240);
+}
+
+.dark {
+  /* --- Dark Mode Tokens (Premium Original) --- */
+  --primary: oklch(55% 0.25 285);
+  --primary-foreground: oklch(98% 0.01 285);
+  
+  --secondary: oklch(35% 0.05 265);
+  --secondary-foreground: oklch(90% 0.02 265);
+
+  --background: oklch(14% 0.02 265);
+  --foreground: oklch(95% 0.01 265);
+  
+  --surface: oklch(18% 0.03 265);
+  --surface-dim: oklch(16% 0.02 265);
+  --surface-bright: oklch(22% 0.04 265);
+  
+  --border: oklch(25% 0.03 265 / 40%);
+  --border-bright: oklch(35% 0.05 265 / 60%);
+  
+  --ring: oklch(55% 0.25 285 / 50%);
+
+  --success: oklch(65% 0.2 155);
+  --success-foreground: oklch(98% 0.01 155);
+  
+  --warning: oklch(75% 0.18 75);
+  --warning-foreground: oklch(20% 0.01 75);
+  
+  --destructive: oklch(55% 0.2 25);
+  --destructive-foreground: oklch(98% 0.01 25);
+  
+  --info: oklch(60% 0.15 240);
+  --info-foreground: oklch(98% 0.01 240);
+}
+
 @theme {
-  /* --- Design Tokens --- */
+  /* --- Mapping Tokens to Tailwind --- */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   
-  /* Primary & Accent */
-  --color-primary: oklch(55% 0.25 285); /* Deep Premium Purple */
-  --color-primary-foreground: oklch(98% 0.01 285);
-  
-  --color-secondary: oklch(35% 0.05 265);
-  --color-secondary-foreground: oklch(90% 0.02 265);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
 
-  /* Surface / Backgrounds */
-  --color-background: oklch(14% 0.02 265);
-  --color-foreground: oklch(95% 0.01 265);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   
-  --color-surface: oklch(18% 0.03 265);
-  --color-surface-dim: oklch(16% 0.02 265);
-  --color-surface-bright: oklch(22% 0.04 265);
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
   
-  --color-border: oklch(25% 0.03 265 / 40%);
-  --color-border-bright: oklch(35% 0.05 265 / 60%);
+  --color-border: var(--border);
+  --color-border-bright: var(--border-bright);
   
-  --color-ring: oklch(55% 0.25 285 / 50%);
+  --color-ring: var(--ring);
 
-  /* Semantic Colors */
-  --color-success: oklch(65% 0.2 155);
-  --color-success-foreground: oklch(98% 0.05 155);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   
-  --color-warning: oklch(75% 0.18 75);
-  --color-warning-foreground: oklch(20% 0.05 75);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   
-  --color-destructive: oklch(55% 0.2 25);
-  --color-destructive-foreground: oklch(98% 0.02 25);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   
-  --color-info: oklch(60% 0.15 240);
-  --color-info-foreground: oklch(98% 0.02 240);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
 
   /* Radius */
   --radius-sm: 0.5rem;
