@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getAllConsultantsRaw } from '../lib/supabase';
+import { getConsultants, updateConsultant, deleteConsultant } from '../lib/supabase';
 import type { Consultant } from '../lib/supabase';
 import { RefreshCw, Search, Filter, SlidersHorizontal, UserPlus, MoreHorizontal, Phone, MapPin } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
@@ -18,11 +18,14 @@ export function ConsultorasPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedConsultant, setSelectedConsultant] = useState<Consultant | null>(null);
+  const [editingConsultant, setEditingConsultant] = useState<Consultant | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { addToast } = useToast();
 
   const fetchData = () => {
     setLoading(true);
-    getAllConsultantsRaw()
+    getConsultants()
       .then(setConsultants)
       .finally(() => setLoading(false));
   };
@@ -49,19 +52,33 @@ export function ConsultorasPage() {
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`¿Estás seguro de eliminar a ${name}? Esta acción no se puede deshacer.`)) {
-      setConsultants(prev => prev.filter(c => c.id !== id));
-      addToast({
-        type: 'success',
-        title: 'Eliminada',
-        body: `Consultora ${name} eliminada con éxito`
-      });
+  const handleEdit = (consultant: Consultant) => {
+    setEditingConsultant({ ...consultant });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingConsultant) return;
+    setIsSaving(true);
+    try {
+      const { id, ...updates } = editingConsultant;
+      await updateConsultant(id, updates);
+      setConsultants(prev => prev.map(c => c.id === id ? editingConsultant : c));
+      addToast({ type: 'success', title: 'Actualización Exitosa', body: `Los datos de ${editingConsultant.nombre} han sido actualizados.` });
+      setEditingConsultant(null);
+    } catch (err) {
+      addToast({ type: 'error', title: 'Error de Guardado', body: String(err) });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleEdit = (name: string) => {
-    addToast({
+  const handleDelete = async (id: string, nombre: string) => {
+    if (!confirm(`¿Estás seguro de que deseas eliminar a "${nombre}"? Esta acción será irreversible.`)) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteConsultant(id);
+      setConsultants(prev => prev.filter(c => c.id !== id));
       type: 'warning',
       title: 'Función en Desarrollo',
       body: `El editor para ${name} estará disponible en la próxima actualización.`
@@ -225,7 +242,7 @@ export function ConsultorasPage() {
                             { 
                               label: 'Editar Datos', 
                               icon: Edit2, 
-                              onClick: () => handleEdit(c.nombre) 
+                              onClick: () => handleEdit(c) 
                             },
                             { 
                               label: 'Enviar WhatsApp', 
@@ -335,6 +352,113 @@ export function ConsultorasPage() {
                 </Button>
               </div>
             </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingConsultant && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-md" onClick={() => !isSaving && setEditingConsultant(null)} />
+          <Card className="w-full max-w-lg relative z-10 glass-premium border-primary/20 shadow-2xl animate-scale-in overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+            
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-black">Editar Consultora</CardTitle>
+                  <CardDescription className="text-[10px] uppercase font-bold tracking-widest mt-1 opacity-40">
+                    ID: {editingConsultant.id}
+                  </CardDescription>
+                </div>
+                <button 
+                  onClick={() => setEditingConsultant(null)}
+                  disabled={isSaving}
+                  className="p-2 hover:bg-surface rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-8 pt-2 space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest opacity-30 px-1">Nombre Completo</label>
+                  <Input 
+                    value={editingConsultant.nombre}
+                    onChange={(e) => setEditingConsultant({ ...editingConsultant, nombre: e.target.value })}
+                    className="bg-surface/50 border-border/50 text-sm h-11"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30 px-1">WhatsApp</label>
+                    <Input 
+                      value={editingConsultant.telefono || ''}
+                      onChange={(e) => setEditingConsultant({ ...editingConsultant, telefono: e.target.value })}
+                      className="bg-surface/50 border-border/50 text-sm h-11 font-mono"
+                      placeholder="521..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30 px-1">Ciudad</label>
+                    <Input 
+                      value={editingConsultant.ciudad || ''}
+                      onChange={(e) => setEditingConsultant({ ...editingConsultant, ciudad: e.target.value })}
+                      className="bg-surface/50 border-border/50 text-sm h-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30 px-1">Estatus</label>
+                    <select 
+                      value={editingConsultant.estatus}
+                      onChange={(e) => setEditingConsultant({ ...editingConsultant, estatus: e.target.value as any })}
+                      className="w-full h-11 bg-surface/50 border border-border/50 rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="Retrasada">Retrasada</option>
+                      <option value="Agendado">Agendado</option>
+                      <option value="Cerrado">Cerrado</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest opacity-30 px-1">Situación</label>
+                    <select 
+                      value={editingConsultant.situacion}
+                      onChange={(e) => setEditingConsultant({ ...editingConsultant, situacion: e.target.value as any })}
+                      className="w-full h-11 bg-surface/50 border border-border/50 rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="Activa">Activa</option>
+                      <option value="Inactiva">Inactiva</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+
+            <div className="p-6 bg-surface-bright/30 border-t border-border/30 flex gap-4">
+              <Button 
+                className="flex-1 font-bold h-12" 
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader className="animate-spin mr-2" size={18} /> : null}
+                Guardar Cambios
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1 font-bold h-12" 
+                onClick={() => setEditingConsultant(null)}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+            </div>
           </Card>
         </div>
       )}

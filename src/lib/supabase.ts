@@ -100,3 +100,19 @@ export async function insertLog(log: Omit<SendLog, 'id' | 'sent_at'>): Promise<v
   const { error } = await supabase.from('send_logs').insert([log]);
   if (error) console.error('Log insert error:', error.message);
 }
+
+export async function updateConsultant(id: string, updates: Partial<Consultant>): Promise<void> {
+  const { error } = await supabase
+    .from('consultants')
+    .update(updates)
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteConsultant(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('consultants')
+    .delete()
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
