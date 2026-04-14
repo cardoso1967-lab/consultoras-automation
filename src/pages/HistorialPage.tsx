@@ -143,9 +143,9 @@ export function HistorialPage() {
                     </td>
                     <td className="px-6 py-4">
                       {log.is_test ? (
-                        <Badge variant="ghost" className="bg-primary/5 text-primary border-primary/20 text-[9px] font-black">🧪 PRUEBA</Badge>
+                        <Badge variant="ghost" className="bg-primary/10 text-primary border-primary/30 text-[9px] font-black uppercase tracking-wider">🧪 PRUEBA</Badge>
                       ) : (
-                        <Badge variant="success" className="bg-success/5 border-success/20 text-[9px] font-black">PRODUCCIÓN</Badge>
+                        <Badge variant="success" className="bg-success/20 border-success/40 text-success text-[9px] font-black uppercase tracking-wider shadow-sm">PRODUCCIÓN</Badge>
                       )}
                     </td>
                   </tr>
