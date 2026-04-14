@@ -8,7 +8,7 @@ import { useToast } from '../context/ToastContext';
 import {
   Send, Beaker, Users, MessageSquare, Eye, ChevronDown,
   CheckCircle, XCircle, AlertTriangle, Loader, Phone,
-  Type, Layout, ListChecks, Smartphone
+  Type, Layout, ListChecks, Smartphone, Settings, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';

@@ -100,9 +100,14 @@ export function CiclosPage() {
                       </td>
                       <td className="px-6 py-5">
                         {c.link_calendly ? (
-                          <Button variant="ghost" size="sm" as="a" href={c.link_calendly} target="_blank" className="gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary">
+                          <a 
+                            href={c.link_calendly} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/5 transition-all"
+                          >
                             Calendly <ExternalLink size={12} />
-                          </Button>
+                          </a>
                         ) : (
                           <span className="text-[10px] font-bold opacity-20 uppercase tracking-tighter">Sin enlace</span>
                         )}

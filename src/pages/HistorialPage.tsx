@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getLogs } from '../lib/supabase';
 import type { SendLog } from '../lib/supabase';
-import { CheckCircle, XCircle, RefreshCw, History, Filter, Beaker, CheckCircle2, XCircle2, Zap } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, History, Filter, Beaker, Zap } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
@@ -53,8 +53,8 @@ export function HistorialPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Envíos', value: total, icon: History, color: 'text-foreground/60' },
-          { label: 'Éxitos Reales', value: successCount, icon: CheckCircle2, color: 'text-success' },
-          { label: 'Errores', value: errorsCount, icon: XCircle2, color: 'text-destructive' },
+          { label: 'Éxitos Reales', value: successCount, icon: CheckCircle, color: 'text-success' },
+          { label: 'Errores', value: errorsCount, icon: XCircle, color: 'text-destructive' },
           { label: 'Pruebas', value: testsCount, icon: Beaker, color: 'text-primary' },
         ].map((stat, i) => (
           <Card key={i} className="bg-surface/30 border-border/20">
