@@ -8,12 +8,17 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Skeleton } from '../components/ui/Skeleton';
 import { cn } from '../lib/utils';
+import { Dropdown } from '../components/ui/Dropdown';
+import { Eye, Send, Copy, X, Edit2, Trash2 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export function ConsultorasPage() {
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedConsultant, setSelectedConsultant] = useState<Consultant | null>(null);
+  const { addToast } = useToast();
 
   const fetchData = () => {
     setLoading(true);
@@ -29,6 +34,39 @@ export function ConsultorasPage() {
     const matchStatus = filterStatus === 'all' || c.estatus === filterStatus;
     return matchSearch && matchStatus;
   });
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    addToast({
+      type: 'success',
+      title: 'Copiado',
+      body: `${label} copiado al portapapeles`
+    });
+  };
+
+  const handleWhatsApp = (phone: string, name: string) => {
+    const msg = encodeURIComponent(`Hola ${name}, te contacto desde AutoMensajes...`);
+    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`¿Estás seguro de eliminar a ${name}? Esta acción no se puede deshacer.`)) {
+      setConsultants(prev => prev.filter(c => c.id !== id));
+      addToast({
+        type: 'success',
+        title: 'Eliminada',
+        body: `Consultora ${name} eliminada con éxito`
+      });
+    }
+  };
+
+  const handleEdit = (name: string) => {
+    addToast({
+      type: 'warning',
+      title: 'Función en Desarrollo',
+      body: `El editor para ${name} estará disponible en la próxima actualización.`
+    });
+  };
 
   return (
     <div className="p-6 md:p-8 space-y-6 animate-fade-in pb-20">
@@ -173,10 +211,41 @@ export function ConsultorasPage() {
                         <span className="text-[10px] font-black tracking-widest leading-none">S{c.semana || '--'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="p-2 rounded-lg hover:bg-surface text-foreground/30 hover:text-foreground transition-colors">
-                        <MoreHorizontal size={18} />
-                      </button>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        <button 
+                          onClick={() => setSelectedConsultant(c)}
+                          className="p-2 rounded-lg hover:bg-primary/10 text-foreground/20 hover:text-primary transition-all group/btn"
+                          title="Ver Detalles"
+                        >
+                          <Eye size={16} className="group-hover/btn:scale-110 transition-transform" />
+                        </button>
+                        <Dropdown 
+                          items={[
+                            { 
+                              label: 'Editar Datos', 
+                              icon: Edit2, 
+                              onClick: () => handleEdit(c.nombre) 
+                            },
+                            { 
+                              label: 'Enviar WhatsApp', 
+                              icon: Send, 
+                              onClick: () => handleWhatsApp(c.telefono || '', c.nombre) 
+                            },
+                            { 
+                              label: 'Copiar ID', 
+                              icon: Copy, 
+                              onClick: () => handleCopy(c.id, 'ID') 
+                            },
+                            { 
+                              label: 'Eliminar Registro', 
+                              icon: Trash2, 
+                              variant: 'destructive',
+                              onClick: () => handleDelete(c.id, c.nombre) 
+                            },
+                          ]}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -185,6 +254,90 @@ export function ConsultorasPage() {
           </div>
         )}
       </Card>
+
+      {/* Detail Modal */}
+      {selectedConsultant && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-md" onClick={() => setSelectedConsultant(null)} />
+          <Card className="w-full max-w-lg relative z-10 glass-premium border-primary/20 shadow-2xl animate-scale-in overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-primary-foreground" />
+            
+            <CardContent className="p-0">
+              <div className="p-8 space-y-8">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="size-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl font-black text-primary">
+                      {selectedConsultant.nombre.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight">{selectedConsultant.nombre}</h3>
+                      <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mt-1">ID: {selectedConsultant.id}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedConsultant(null)}
+                    className="p-2 rounded-xl bg-surface/50 border border-border/50 hover:bg-destructive/10 hover:text-destructive transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-surface/30 border border-border/30 space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Estado Principal</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={selectedConsultant.estatus === 'Retrasada' ? 'destructive' : 'warning'}>
+                        {selectedConsultant.estatus}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-surface/30 border border-border/30 space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Situación</span>
+                    <div className="flex items-center gap-2">
+                       <div className={cn("size-2 rounded-full", selectedConsultant.situacion === 'Activa' ? "bg-success" : "bg-foreground/20")} />
+                       <span className="text-sm font-bold italic">{selectedConsultant.situacion}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/30 px-2">Información de Contacto</h4>
+                  <div className="space-y-2">
+                    {[
+                      { icon: Phone, label: 'Teléfono', value: selectedConsultant.telefono || 'No registrado' },
+                      { icon: MapPin, label: 'Ciudad', value: selectedConsultant.ciudad || 'No registrada' },
+                      { icon: MapPin, label: 'Región', value: selectedConsultant.region || '—' },
+                    ].map((info, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-surface/20 border border-border/10 group hover:border-primary/20 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <info.icon size={16} className="text-foreground/30 group-hover:text-primary transition-colors" />
+                          <span className="text-sm font-medium">{info.value}</span>
+                        </div>
+                        <button 
+                          onClick={() => handleCopy(info.value, info.label)}
+                          className="text-[10px] font-black uppercase text-primary/40 hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-surface-bright/30 border-t border-border/30 flex gap-4">
+                <Button className="flex-1 font-bold h-12" onClick={() => handleWhatsApp(selectedConsultant.telefono || '', selectedConsultant.nombre)}>
+                  <Send size={18} />
+                  Enviar WhatsApp
+                </Button>
+                <Button variant="outline" className="flex-1 font-bold h-12" onClick={() => setSelectedConsultant(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

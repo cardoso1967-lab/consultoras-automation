@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [search, setSearch] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
 
