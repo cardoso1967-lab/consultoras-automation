@@ -58,6 +58,7 @@ export function ConsultorasPage() {
               placeholder="Buscar por nombre, localidad o ID…" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch('')}
               icon={<Search size={18} aria-hidden="true" />}
               className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base"
               aria-label="Buscar consultoras"

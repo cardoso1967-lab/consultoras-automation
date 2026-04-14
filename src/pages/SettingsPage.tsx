@@ -58,6 +58,7 @@ export function SettingsPage() {
                   <Input 
                     value={zapiInstance} 
                     onChange={e => setZapiInstance(e.target.value)} 
+                    onClear={() => setZapiInstance('')}
                     placeholder="Ej: 3CB04239..."
                     icon={<Server size={18} />}
                   />
@@ -99,6 +100,7 @@ export function SettingsPage() {
                 <Input 
                   value={romanceUrl} 
                   onChange={e => setRomanceUrl(e.target.value)} 
+                  onClear={() => setRomanceUrl('')}
                   placeholder="https://api.v1.romanceleads.io"
                   icon={<Globe size={18} />}
                 />
@@ -136,6 +138,7 @@ export function SettingsPage() {
                   <Input 
                     value={testPhone} 
                     onChange={e => setTestPhone(e.target.value)} 
+                    onClear={() => setTestPhone('')}
                     placeholder="521XXXXXXXXXX"
                     icon={<Phone size={18} className="text-warning" />}
                   />

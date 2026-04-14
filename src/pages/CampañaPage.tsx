@@ -299,6 +299,7 @@ export function CampañaPage() {
                       className="bg-surface/60 border-primary/20 h-9 text-xs"
                       value={testPhone}
                       onChange={(e) => setTestPhone(e.target.value)}
+                      onClear={() => setTestPhone('')}
                       placeholder="521XXXXXXXXXX"
                     />
                   </div>
