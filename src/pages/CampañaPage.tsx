@@ -7,8 +7,14 @@ import type { SendResult } from '../lib/zapi';
 import { useToast } from '../context/ToastContext';
 import {
   Send, Beaker, Users, MessageSquare, Eye, ChevronDown,
-  CheckCircle, XCircle, AlertTriangle, Loader, Phone
+  CheckCircle, XCircle, AlertTriangle, Loader, Phone,
+  Type, Layout, ListChecks, Smartphone
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { cn } from '../lib/utils';
 
 const DEFAULT_TEMPLATE = `Hola {{nombre}} 👋
 
@@ -75,14 +81,13 @@ export function CampañaPage() {
       });
 
       const successes = res.filter((r) => r.success).length;
-      const errors = res.filter((r) => !r.success && !r.skipped).length;
       addToast({
         type: successes > 0 ? 'success' : 'error',
-        title: isTest ? '✅ Prueba completada' : `✅ Campaña enviada`,
-        body: `${successes} enviados correctamente, ${errors} errores`,
+        title: isTest ? 'Prueba completada' : 'Campaña enviada',
+        body: `${successes} enviados exitosamente`,
       });
     } catch (err) {
-      addToast({ type: 'error', title: 'Error en la campaña', body: String(err) });
+      addToast({ type: 'error', title: 'Error en campaña', body: String(err) });
     } finally {
       setRunning(false);
     }
@@ -92,287 +97,295 @@ export function CampañaPage() {
     setTemplate((prev) => prev + v);
   };
 
-  if (loading) return <div className="page-content"><p style={{ color: 'var(--color-text-muted)' }}>Cargando...</p></div>;
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center h-full">
+        <Loader className="animate-spin text-primary" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="page-content">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Nueva Campaña</h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>
-          {cycleOk
-            ? `Ciclo activo: ${activeCycle?.numero} — ${targets.length} consultoras objetivo`
-            : '⚠️ No hay ciclo activo hoy. El envío está bloqueado por la regla de fechas.'}
-        </p>
+    <div className="p-6 md:p-8 space-y-6 animate-fade-in pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight">Compositor de Campaña</h2>
+          <p className="text-sm font-medium text-foreground/40 italic">
+            {cycleOk 
+              ? `Ciclo ${activeCycle?.numero} activo · ${targets.length} destinos detectados`
+              : "Validación de ciclo requerida para envíos en producción"}
+          </p>
+        </div>
       </div>
 
       {!cycleOk && (
-        <div style={{ background: 'var(--color-warning-bg)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <AlertTriangle size={16} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
-          <span style={{ fontSize: 13 }}>
-            La validación de fechas bloqueó el envío (igual que el nodo "Check Dates and Rules" en N8N).
-            {activeCycle ? ` Ventana del ciclo: ${activeCycle.inicio} → ${activeCycle.fin}.` : ' No hay ciclo configurado para hoy.'}
-          </span>
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-start gap-3">
+          <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold uppercase tracking-tight">Envío Bloqueado</p>
+            <p className="opacity-80">La fecha actual está fuera de la ventana operativa del ciclo activo. El modo producción no está disponible.</p>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
-        {/* Left: Composer */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Tabs */}
-          <div className="tabs">
-            <button className={`tab-btn ${activeTab === 'editor' ? 'active' : ''}`} onClick={() => setActiveTab('editor')}>
-              ✍️ Editor
-            </button>
-            <button className={`tab-btn ${activeTab === 'preview' ? 'active' : ''}`} onClick={() => setActiveTab('preview')}>
-              👁️ Previsualizar
-            </button>
-            <button className={`tab-btn ${activeTab === 'seleccion' ? 'active' : ''}`} onClick={() => setActiveTab('seleccion')}>
-              👥 Selección ({targets.length})
-            </button>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
+        {/* Main Workspace */}
+        <div className="space-y-6">
+          {/* Custom Tabs */}
+          <div className="flex bg-surface-dim p-1 rounded-xl w-fit border border-border/50 shadow-inner">
+            {[
+              { id: 'editor', label: 'Editor', icon: Type },
+              { id: 'preview', label: 'Preview', icon: Smartphone },
+              { id: 'seleccion', label: 'Destinatarios', icon: ListChecks },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                  activeTab === tab.id 
+                    ? "bg-surface text-primary shadow-sm" 
+                    : "text-foreground/40 hover:text-foreground/60"
+                )}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Editor Tab */}
-          {activeTab === 'editor' && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-title"><MessageSquare size={15} />Mensaje</div>
-              </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8, fontWeight: 600 }}>INSERTAR VARIABLE</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {VARIABLES.map((v) => (
-                      <span key={v} className="chip" onClick={() => insertVariable(v)}>{v}</span>
-                    ))}
+          <Card className="min-h-[500px] border-border/30 overflow-hidden glass shadow-2xl">
+            {activeTab === 'editor' && (
+              <div className="animate-fade-in flex flex-col h-full">
+                <CardHeader className="border-b border-border/30 bg-surface/30">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm uppercase tracking-widest flex items-center gap-2">
+                      <MessageSquare size={14} /> Cuerpo del Mensaje
+                    </CardTitle>
+                    <Badge variant="ghost" className="text-[10px] opacity-40">
+                      {template.length} caracteres
+                    </Badge>
                   </div>
-                </div>
-                <div className="form-field">
-                  <textarea
-                    className="form-textarea"
-                    value={template}
-                    onChange={(e) => setTemplate(e.target.value)}
-                    rows={10}
-                    placeholder="Escribe tu mensaje aquí..."
-                    style={{ fontFamily: 'monospace', fontSize: 13 }}
-                  />
-                  <div style={{ fontSize: 11, color: 'var(--color-text-faint)', textAlign: 'right' }}>
-                    {template.length} caracteres · {template.split('\n').length} líneas
+                </CardHeader>
+                <CardContent className="p-6 space-y-6 flex-1 flex flex-col">
+                  <div>
+                    <label className="text-[10px] font-black tracking-widest text-foreground/30 uppercase mb-3 block">Tokens Dinámicos</label>
+                    <div className="flex flex-wrap gap-2">
+                      {VARIABLES.map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => insertVariable(v)}
+                          className="px-2.5 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-[11px] font-mono text-primary font-bold hover:bg-primary/10 transition-colors"
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                  
+                  <div className="flex-1 min-h-[300px] relative">
+                    <textarea
+                      value={template}
+                      onChange={(e) => setTemplate(e.target.value)}
+                      className="w-full h-full bg-transparent border-none focus:ring-0 resize-none font-mono text-sm leading-relaxed text-foreground/80 placeholder:text-foreground/20"
+                      placeholder="Redacta tu mensaje aquí..."
+                    />
+                  </div>
+                </CardContent>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Preview Tab */}
-          {activeTab === 'preview' && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-title"><Eye size={15} />Previsualización</div>
-                <select
-                  className="form-select"
-                  style={{ width: 'auto', fontSize: 12 }}
-                  value={previewConsultant?.id || ''}
-                  onChange={(e) => setPreviewConsultant(targets.find(c => c.id === e.target.value) || null)}
-                >
-                  {targets.slice(0, 20).map((c) => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="card-body" style={{ display: 'flex', justifyContent: 'center' }}>
-                <div className="phone-preview">
-                  <div className="phone-wapp-header">
-                    <div className="phone-wapp-avatar">💬</div>
+            {activeTab === 'preview' && (
+              <div className="animate-fade-in p-8 flex flex-col items-center justify-center min-h-[500px]">
+                <div className="w-full max-w-sm mb-6">
+                   <CardDescription className="text-center text-[10px] uppercase font-black mb-4 tracking-widest opacity-30">Simulación de Dispositivo</CardDescription>
+                   <div className="w-full h-px bg-border/20 mb-6" />
+                </div>
+                
+                {/* Real-ish Phone UI */}
+                <div className="w-[300px] bg-[#0b141a] rounded-[3rem] p-3 border-[8px] border-[#1c2e35] shadow-2xl overflow-hidden relative group">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#1c2e35] rounded-b-2xl z-10" />
+                  
+                  <div className="bg-[#128c7e] px-4 py-8 pt-10 flex items-center gap-3">
+                    <div className="size-9 rounded-full bg-[#25d366] flex items-center justify-center text-[#075e54] font-bold">CM</div>
                     <div>
-                      <div className="phone-wapp-name">Cardoso Modas</div>
-                      <div className="phone-wapp-status">en línea</div>
+                      <h4 className="text-white text-sm font-bold leading-tight">Cardoso Modas</h4>
+                      <p className="text-white/60 text-[10px]">En línea</p>
                     </div>
                   </div>
-                  <div className="phone-wapp-body">
-                    <div className="phone-bubble">
+
+                  <div className="bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-contain p-4 min-h-[300px] space-y-4">
+                    <div className="bg-[#056162] text-white p-3 rounded-tr-none rounded-2xl shadow-sm text-xs leading-relaxed max-w-[85%] ml-auto animate-fade-in">
                       {previewText}
-                      <div className="phone-bubble-time">
-                        {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} ✓✓
-                      </div>
+                      <div className="text-[9px] text-white/40 text-right mt-1 font-medium">9:41 AM ✓✓</div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Selection Tab */}
-          {activeTab === 'seleccion' && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-title"><Users size={15} />{targets.length} consultoras objetivo</div>
-              </div>
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Nombre</th>
-                      <th>Teléfono</th>
-                      <th>Estatus</th>
-                      <th>Ciudad</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {targets.map((c) => (
-                      <tr key={c.id}>
-                        <td style={{ fontWeight: 600 }}>{c.nombre}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{c.telefono}</td>
-                        <td>
-                          <span className={`badge ${c.estatus === 'Retrasada' ? 'badge-retrasada' : 'badge-pendiente'}`}>
-                            {c.estatus}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--color-text-muted)' }}>{c.ciudad || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Results (shown after run) */}
-          {results.length > 0 && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-title">Resultados del Envío</div>
-                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                  {results.filter(r => r.success).length}/{results.length} exitosos
+                <div className="mt-8 flex items-center gap-3">
+                  <span className="text-xs text-foreground/40 font-bold uppercase">Previsualizar con:</span>
+                  <select
+                    className="bg-surface border border-border/50 text-xs px-3 py-1.5 rounded-lg outline-none focus:ring-1 focus:ring-primary"
+                    value={previewConsultant?.id || ''}
+                    onChange={(e) => setPreviewConsultant(targets.find(c => c.id === e.target.value) || null)}
+                  >
+                    {targets.slice(0, 15).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
                 </div>
               </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {running && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, color: 'var(--color-text-muted)' }}>
-                      <span>Progreso</span><span>{progress}%</span>
-                    </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill progress-fill-primary" style={{ width: `${progress}%` }} />
-                    </div>
+            )}
+
+            {activeTab === 'seleccion' && (
+              <div className="animate-fade-in">
+                <CardHeader className="bg-surface/30">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users size={16} /> Destinatarios ({targets.length})
+                  </CardTitle>
+                </CardHeader>
+                <div className="overflow-x-auto max-h-[400px] custom-scrollbar">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-surface z-10">
+                      <tr className="border-b border-border/30">
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-foreground/40">Nombre</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-foreground/40">Estatus</th>
+                        <th className="px-6 py-3 text-[10px] font-black uppercase text-foreground/40">WhatsApp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {targets.map(c => (
+                        <tr key={c.id} className="text-xs hover:bg-primary/5 transition-colors">
+                          <td className="px-6 py-3 font-semibold">{c.nombre}</td>
+                          <td className="px-6 py-3"><Badge variant="outline">{c.estatus}</Badge></td>
+                          <td className="px-6 py-3 font-mono opacity-60 text-[10px]">{c.telefono}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Configuration Panel */}
+        <aside className="space-y-6">
+          <Card className="bg-surface/30 backdrop-blur-xl border-border/40">
+            <CardHeader>
+              <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                <Settings size={14} /> Configuración
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div 
+                onClick={() => setIsTest(true)}
+                className={cn(
+                  "p-4 rounded-xl border-2 transition-all cursor-pointer group",
+                  isTest ? "border-primary bg-primary/10 shadow-lg shadow-primary/5" : "border-border/40 bg-surface/40 hover:border-primary/20"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={cn("size-5 rounded-full border-2 flex items-center justify-center transition-colors", isTest ? "border-primary bg-primary" : "border-foreground/20")}>
+                    {isTest && <div className="size-2 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <h5 className="text-sm font-bold italic">🧪 Modo Prueba</h5>
+                    <p className="text-[10px] text-foreground/40 mt-0.5 leading-tight">Envío exclusivo a tu terminal de control personal.</p>
+                  </div>
+                </div>
+                {isTest && (
+                  <div className="mt-4 pt-4 border-t border-primary/20 space-y-2">
+                    <label className="text-[10px] font-black uppercase opacity-60">Terminal de Control</label>
+                    <Input 
+                      className="bg-surface/60 border-primary/20 h-9 text-xs"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                      placeholder="521XXXXXXXXXX"
+                    />
                   </div>
                 )}
-                {results.map((r, i) => (
-                  <div key={i} className="log-entry">
-                    <span className="log-icon">
-                      {r.success
-                        ? <CheckCircle size={14} style={{ color: 'var(--color-success)' }} />
-                        : r.skipped
-                        ? <AlertTriangle size={14} style={{ color: 'var(--color-warning)' }} />
-                        : <XCircle size={14} style={{ color: 'var(--color-danger)' }} />}
-                    </span>
-                    <div className="log-msg">
-                      <b>{r.consultant.nombre}</b>
-                      {' · '}
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: 11.5 }}>
-                        {r.skipped ? r.skipReason : r.success ? `✓ ${r.phone}` : `✗ ${r.error}`}
-                      </span>
-                    </div>
+              </div>
+
+              <div 
+                onClick={() => cycleOk && setIsTest(false)}
+                className={cn(
+                  "p-4 rounded-xl border-2 transition-all cursor-pointer group",
+                  !isTest ? "border-destructive bg-destructive/10 shadow-lg shadow-destructive/5" : "border-border/40 bg-surface/40",
+                  !cycleOk && "opacity-50 grayscale cursor-not-allowed"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={cn("size-5 rounded-full border-2 flex items-center justify-center transition-colors", !isTest ? "border-destructive bg-destructive" : "border-foreground/20")}>
+                    {!isTest && <div className="size-2 rounded-full bg-white" />}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Config & Send */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Mode selector */}
-          <div className="card">
-            <div className="card-header">
-              <div className="card-title"><Beaker size={15} />Modo de Envío</div>
-            </div>
-            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, background: isTest ? 'var(--color-primary-glow)' : 'transparent', border: `1px solid ${isTest ? 'rgba(139,92,246,0.3)' : 'var(--color-border)'}`, transition: 'all 0.2s' }}>
-                <input type="radio" checked={isTest} onChange={() => setIsTest(true)} style={{ accentColor: 'var(--color-primary)' }} />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>🧪 Modo Prueba</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>Envía solo a tu número de prueba</div>
-                </div>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, background: !isTest ? 'var(--color-danger-bg)' : 'transparent', border: `1px solid ${!isTest ? 'rgba(239,68,68,0.3)' : 'var(--color-border)'}`, transition: 'all 0.2s' }}>
-                <input type="radio" checked={!isTest} onChange={() => setIsTest(false)} style={{ accentColor: 'var(--color-danger)' }} />
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>🚀 Producción</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--color-text-muted)', marginTop: 2 }}>Envía a las {targets.length} consultoras reales</div>
-                </div>
-              </label>
-              {isTest && (
-                <div className="form-field">
-                  <label className="form-label"><Phone size={12} style={{ display: 'inline' }} /> Número de prueba</label>
-                  <input
-                    className="form-input"
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                    placeholder="521XXXXXXXXXX"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Send button */}
-          <button
-            className={`btn btn-lg ${isTest ? 'btn-secondary' : 'btn-danger'}`}
-            style={{ width: '100%', justifyContent: 'center' }}
-            disabled={running || (!cycleOk && !isTest) || targets.length === 0}
-            onClick={() => isTest ? handleRun() : setShowConfirm(true)}
-          >
-            {running
-              ? <><Loader size={16} className="btn-spin" />Enviando...</>
-              : isTest
-              ? <><Beaker size={16} />Enviar Prueba</>
-              : <><Send size={16} />Lanzar Campaña Real</>}
-          </button>
-
-          {!isTest && !cycleOk && (
-            <p style={{ fontSize: 12, color: 'var(--color-warning)', textAlign: 'center' }}>
-              ⚠️ Deshabilitado: Fuera de ventana del ciclo
-            </p>
-          )}
-
-          {/* Cycle summary */}
-          {activeCycle && (
-            <div className="card">
-              <div className="card-body" style={{ fontSize: 12.5 }}>
-                <div style={{ color: 'var(--color-text-muted)', marginBottom: 8, fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>Ciclo Seleccionado</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{activeCycle.region} · {activeCycle.numero}</div>
-                <div style={{ color: 'var(--color-text-muted)' }}>
-                  {activeCycle.inicio} → {activeCycle.fin}
+                  <div>
+                    <h5 className="text-sm font-bold italic underline decoration-destructive/30 underline-offset-4">🚀 Producción</h5>
+                    <p className="text-[10px] text-foreground/40 mt-0.5 leading-tight text-balance">Distribución real a todas las consultoras objetivo.</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                variant={isTest ? "default" : "destructive"} 
+                className={cn("w-full h-12 shadow-xl", !isTest && "animate-pulse-subtle")}
+                disabled={running || (!cycleOk && !isTest) || targets.length === 0}
+                onClick={() => isTest ? handleRun() : setShowConfirm(true)}
+              >
+                {running ? (
+                  <Loader className="animate-spin" size={18} />
+                ) : (
+                  <>
+                    <Zap className={cn("size-4 fill-current", isTest ? "text-warning" : "text-white")} />
+                    {isTest ? "Ejecutar Prueba" : "Lanzar Campaña Real"}
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+
+          {/* Action Log - Real time feedback */}
+          {results.length > 0 && (
+            <Card className="bg-surface/20 border-border/20">
+              <CardHeader className="p-4 pb-2 border-b border-border/10">
+                <CardTitle className="text-[10px] uppercase font-black tracking-widest opacity-40">Progreso en Vivo</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+                <div className="space-y-1.5">
+                  {results.slice().reverse().map((r, i) => (
+                    <div key={i} className="flex items-start gap-2.5 p-2 rounded-lg bg-surface/40 border border-border/10 animate-fade-in">
+                      {r.success ? <CheckCircle className="text-success shrink-0" size={12} /> : <XCircle className="text-destructive shrink-0" size={12} />}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] font-bold truncate">{r.consultant.nombre}</span>
+                        <span className="text-[9px] opacity-40 leading-none">{r.success ? "✓ Entregado" : "✗ Fallido"}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </div>
+        </aside>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Overlay Premium */}
       {showConfirm && (
-        <div className="modal-overlay" onClick={() => setShowConfirm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">⚠️ Confirmar Envío Masivo</div>
-            </div>
-            <div className="modal-body">
-              <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.6 }}>
-                Estás a punto de enviar mensajes de WhatsApp vía <b>Z-API</b> a <b>{targets.length} consultoras reales</b> con estatus Pendiente o Retrasada.
-              </p>
-              <p style={{ color: 'var(--color-warning)', fontSize: 13 }}>
-                Esta acción <b>no se puede deshacer</b>. ¿Estás seguro/a?
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowConfirm(false)}>Cancelar</button>
-              <button className="btn btn-danger" onClick={handleRun}>
-                <Send size={14} />
-                Sí, enviar a {targets.length} personas
-              </button>
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in shadow-2xl">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-md" onClick={() => setShowConfirm(false)} />
+          <Card className="w-full max-w-lg relative z-10 glass-premium border-destructive/20 shadow-2xl animate-scale-in">
+            <CardHeader>
+              <div className="size-16 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive mb-4 shadow-inner">
+                <AlertTriangle size={32} />
+              </div>
+              <CardTitle className="text-2xl font-black">¿Inciar Envío Masivo?</CardTitle>
+              <CardDescription className="text-base font-medium mt-2">
+                Esta acción enviará <span className="text-destructive font-black underline decoration-destructive/30">{targets.length} mensajes reales</span> vía Z-API. Esta operación es irreversible.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="flex gap-4 pt-4 pb-8 px-8">
+              <Button variant="ghost" className="flex-1 font-bold" onClick={() => setShowConfirm(false)}>Desechar</Button>
+              <Button variant="destructive" className="flex-1 font-bold shadow-xl shadow-destructive/20 active:scale-95" onClick={handleRun}>Lanzar Ahora</Button>
+            </CardFooter>
+          </Card>
         </div>
       )}
     </div>

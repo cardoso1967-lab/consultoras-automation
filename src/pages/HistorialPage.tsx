@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { getLogs } from '../lib/supabase';
 import type { SendLog } from '../lib/supabase';
-import { CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, History, Filter, Beaker, CheckCircle2, XCircle2, Zap } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import { Skeleton } from '../components/ui/Skeleton';
+import { cn } from '../lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export function HistorialPage() {
   const [logs, setLogs] = useState<SendLog[]>([]);
@@ -25,101 +32,121 @@ export function HistorialPage() {
   });
 
   const total = logs.length;
-  const success = logs.filter((l) => l.status === 'success' && !l.is_test).length;
-  const errors = logs.filter((l) => l.status === 'error').length;
-  const tests = logs.filter((l) => l.is_test).length;
+  const successCount = logs.filter((l) => l.status === 'success' && !l.is_test).length;
+  const errorsCount = logs.filter((l) => l.status === 'error').length;
+  const testsCount = logs.filter((l) => l.is_test).length;
 
   return (
-    <div className="page-content">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+    <div className="p-6 md:p-8 space-y-8 animate-fade-in pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800 }}>Historial de Envíos</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>Log completo de todos los mensajes enviados</p>
+          <h2 className="text-2xl font-black tracking-tight">Registro de Auditoría</h2>
+          <p className="text-sm text-foreground/40 font-medium italic italic">Histórico completo de interacciones vía WhatsApp Bridge</p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={fetchLogs}>
-          <RefreshCw size={13} />
-          Actualizar
-        </button>
+        <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading} className="glass">
+          <RefreshCw size={14} className={cn(loading && "animate-spin")} />
+          Refrescar Logs
+        </Button>
       </div>
 
-      {/* Stats row */}
-      <div className="stat-grid" style={{ marginBottom: 20 }}>
-        <div className="stat-card">
-          <div className="stat-label">Total Registros</div>
-          <div className="stat-value">{total}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Exitosos Reales</div>
-          <div className="stat-value" style={{ color: 'var(--color-success)' }}>{success}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Errores</div>
-          <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{errors}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Pruebas</div>
-          <div className="stat-value" style={{ color: 'var(--color-info)' }}>{tests}</div>
-        </div>
+      {/* Mini KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Envíos', value: total, icon: History, color: 'text-foreground/60' },
+          { label: 'Éxitos Reales', value: successCount, icon: CheckCircle2, color: 'text-success' },
+          { label: 'Errores', value: errorsCount, icon: XCircle2, color: 'text-destructive' },
+          { label: 'Pruebas', value: testsCount, icon: Beaker, color: 'text-primary' },
+        ].map((stat, i) => (
+          <Card key={i} className="bg-surface/30 border-border/20">
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+              <span className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-1">{stat.label}</span>
+              <div className={cn("text-xl font-black", stat.color)}>{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="tabs" style={{ maxWidth: 400, marginBottom: 16 }}>
-        {(['all', 'success', 'error', 'test'] as const).map((f) => (
+      {/* Filter Tabs */}
+      <div className="flex bg-surface-dim p-1 rounded-xl w-fit border border-border/50 shadow-inner">
+        {[
+          { id: 'all', label: 'Todos' },
+          { id: 'success', label: 'Éxitos' },
+          { id: 'error', label: 'Errores' },
+          { id: 'test', label: 'Pruebas' },
+        ].map((f) => (
           <button
-            key={f}
-            className={`tab-btn ${filter === f ? 'active' : ''}`}
-            onClick={() => setFilter(f)}
+            key={f.id}
+            onClick={() => setFilter(f.id as any)}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+              filter === f.id 
+                ? "bg-surface text-primary shadow-sm" 
+                : "text-foreground/40 hover:text-foreground/60"
+            )}
           >
-            {f === 'all' ? 'Todos' : f === 'success' ? '✅ Éxitos' : f === 'error' ? '❌ Errores' : '🧪 Pruebas'}
+            {f.label}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="card">
+      <Card className="overflow-hidden border-border/30 bg-surface/20">
         {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-text-muted)' }}>Cargando historial...</div>
+          <div className="p-8 space-y-4">
+            {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📭</div>
-            <div className="empty-state-title">Sin registros</div>
-            <div className="empty-state-text">
-              {logs.length === 0
-                ? 'Aún no se ha enviado ninguna campaña. La tabla send_logs se creará automáticamente en tu próxima ejecución.'
-                : 'No hay registros con este filtro.'}
+          <div className="p-20 text-center space-y-4">
+            <div className="size-16 bg-surface rounded-2xl flex items-center justify-center mx-auto text-foreground/20 border border-border/50">
+              <History size={24} />
             </div>
+            <p className="text-sm font-medium text-foreground/40 italic">No se encontraron registros para este criterio.</p>
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th>Estado</th>
-                  <th>Consultora</th>
-                  <th>Teléfono</th>
-                  <th>Ciclo</th>
-                  <th>Fecha/Hora</th>
-                  <th>Tipo</th>
+                <tr className="border-b border-border/50 bg-surface/40">
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Estado</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Consultora</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Destino</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Marca de Tiempo</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">Modalidad</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border/30">
                 {filtered.map((log) => (
-                  <tr key={log.id}>
-                    <td>
-                      {log.status === 'success'
-                        ? <CheckCircle size={15} style={{ color: 'var(--color-success)' }} />
-                        : <XCircle size={15} style={{ color: 'var(--color-danger)' }} />}
+                  <tr key={log.id} className="group hover:bg-surface/30 transition-colors">
+                    <td className="px-6 py-4">
+                      {log.status === 'success' ? (
+                        <div className="size-7 rounded-full bg-success/10 flex items-center justify-center text-success">
+                          <CheckCircle size={16} />
+                        </div>
+                      ) : (
+                        <div className="size-7 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+                          <XCircle size={16} />
+                        </div>
+                      )}
                     </td>
-                    <td style={{ fontWeight: 600 }}>{log.consultant_name}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--color-text-muted)' }}>{log.phone}</td>
-                    <td style={{ color: 'var(--color-text-muted)' }}>{log.ciclo_id.slice(0, 8)}...</td>
-                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                      {new Date(log.sent_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    <td className="px-6 py-4">
+                      <span className="font-bold text-sm tracking-tight">{log.consultant_name}</span>
                     </td>
-                    <td>
-                      {log.is_test
-                        ? <span className="badge badge-inactivo">🧪 Prueba</span>
-                        : <span className="badge badge-activo">Real</span>}
+                    <td className="px-6 py-4">
+                      <span className="text-xs font-mono opacity-60 bg-surface/40 px-2 py-0.5 rounded border border-border/30">
+                        {log.phone}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold">{format(new Date(log.sent_at), 'dd MMM yyyy', { locale: es })}</span>
+                        <span className="text-[10px] opacity-30 font-bold uppercase tracking-tighter">{format(new Date(log.sent_at), 'HH:mm:ss')}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {log.is_test ? (
+                        <Badge variant="ghost" className="bg-primary/5 text-primary border-primary/20 text-[9px] font-black">🧪 PRUEBA</Badge>
+                      ) : (
+                        <Badge variant="success" className="bg-success/5 border-success/20 text-[9px] font-black">PRODUCCIÓN</Badge>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -127,7 +154,7 @@ export function HistorialPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
