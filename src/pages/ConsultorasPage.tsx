@@ -79,10 +79,12 @@ export function ConsultorasPage() {
     try {
       await deleteConsultant(id);
       setConsultants(prev => prev.filter(c => c.id !== id));
-      type: 'warning',
-      title: 'Función en Desarrollo',
-      body: `El editor para ${name} estará disponible en la próxima actualización.`
-    });
+      addToast({ type: 'success', title: 'Registro Eliminado', body: `Se ha eliminado satisfactoriamente a ${nombre}.` });
+    } catch (err) {
+      addToast({ type: 'error', title: 'Error al Eliminar', body: String(err) });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
